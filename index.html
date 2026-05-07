@@ -1,0 +1,243 @@
+!<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2501110080_오수한_박스_과제</title>
+    
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #ffffff;
+            cursor: none; /* 시스템 커서 숨김 */
+        }
+        
+        /* [추가됨] 마우스 커서를 따라다니는 작은 원 */
+        #custom-cursor {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            border: 1px solid #a2a5b9;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+
+        .star {
+            position: absolute;
+            pointer-events: none;
+            transform-origin: center;
+            /* [수정됨] SVG 대신 CSS clip-path 사용 */
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+        
+        /* [수정됨] 잔상용 별: 꽉 찬(Solid) 파스텔 색상 */
+        .trail {
+            /* JS에서 getRandomPastelColor()로 background-color 주입 */
+            
+            /* ⭐ 핵심 수정 사항 */
+            opacity: 0.5; /* Solid 형태이므로 투명도를 살짝 높임 (0.3 -> 0.5) */
+            
+            /* 이전의 라운드 처리를 CSS로 재현하기 위해 filter 사용 (선택사항) */
+            /* filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); */
+
+            transition: width 1s ease-out, height 1s ease-out, top 1s ease-out, left 1s ease-out, opacity 1s ease-out;
+        }
+        
+        /* 생성 순간의 스타일 (더 진하게) */
+        .trail.active {
+            opacity: 0.8;
+            transition: none;
+        }
+
+        /* 클릭 파티클: Solid 유지 (기존과 동일) */
+        .particle {
+            opacity: 1;
+            transition: transform 1s ease-out, opacity 1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="custom-cursor"></div>
+
+    <script>
+    const customCursor = document.getElementById('custom-cursor');
+    let globalRotate = 0;
+    const rotateSpeed = 0.4;
+
+    // 잔상 간격 조절
+    let lastX = 0;
+    let lastY = 0;
+    const minDistance = 25; 
+
+    // 파스텔톤 랜덤 색상 함수
+    function getRandomPastelColor(alpha = 1) {
+        const hue = Math.random() * 360; 
+        const saturation = Math.random() * 20 + 80; 
+        const lightness = Math.random() * 20 + 70; 
+        return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+    }
+
+    // 1. 마우스 이동 이벤트 (잔상 생성 + 커서)
+    document.addEventListener('mousemove', function(event) {
+        const mouseX = event.clientX;
+        const mouseY = event.clientY;
+
+        customCursor.style.left = `${mouseX}px`;
+        customCursor.style.top = `${mouseY}px`;
+
+        const distance = Math.sqrt(Math.pow(mouseX - lastX, 2) + Math.pow(mouseY - lastY, 2));
+
+        if (distance > minDistance) {
+            const star = document.createElement('div');
+            star.className = 'star trail active';
+            star.style.backgroundColor = getRandomPastelColor(0.5);
+
+            const startSize = 100; 
+            star.style.width = star.style.height = `${startSize}px`;
+            star.style.top = `${mouseY - startSize/2}px`;
+            star.style.left = `${mouseX - startSize/2}px`;
+            
+            star.style.transform = `scale(0) rotate(${globalRotate}deg)`;
+            document.body.appendChild(star);
+
+            setTimeout(() => {
+                star.classList.remove('active');
+                const endSize = 30; 
+                star.style.width = star.style.height = `${endSize}px`;
+                star.style.top = `${mouseY - endSize/2}px`;
+                star.style.left = `${mouseX - endSize/2}px`;
+                star.style.opacity = '0';
+                star.style.transform = `scale(1) rotate(${globalRotate + 45}deg)`;
+            }, 50);
+
+            setTimeout(() => star.remove(), 1050);
+
+            lastX = mouseX;
+            lastY = mouseY;
+        }
+    });
+
+    // 2. 클릭 파티클
+    document.addEventListener('click', function(event) {
+        const particleCount = 12;
+        for (let i = 0; i < particleCount; i++) {
+            const p = document.createElement('div');
+            p.className = 'star particle';
+            const size = Math.random() * 20 + 25; 
+            p.style.width = p.style.height = `${size}px`;
+            p.style.top = `${event.clientY - size/2}px`;
+            p.style.left = `${event.clientX - size/2}px`;
+            p.style.backgroundColor = getRandomPastelColor(1);
+            p.style.transform = `translate(0, 0) scale(0)`;
+            document.body.appendChild(p);
+
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 100 + 70; 
+            const destX = Math.cos(angle) * distance;
+            const destY = Math.sin(angle) * distance;
+
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    p.style.transform = `translate(${destX}px, ${destY}px) scale(1.5) rotate(${Math.random() * 360}deg)`;
+                }, 10);
+                setTimeout(() => {
+                    p.style.transform = `translate(${destX * 1.2}px, ${destY * 1.2}px) scale(0) rotate(${Math.random() * 720}deg)`;
+                    p.style.opacity = '0';
+                }, 500);
+            });
+            setTimeout(() => p.remove(), 1500);
+        }
+    });
+
+    // 3. [수정됨] 배경에 떨어지는 "상당히 큰" 연한 별
+    function createFallingStar(initialY = null) {
+        const s = document.createElement('div');
+        s.className = 'star background-star'; 
+        
+        const size = Math.random() * 150 + 150; 
+        s.style.width = s.style.height = `${size}px`;
+
+        let bestLeft = 0;
+        let minOverlap = Infinity;
+
+        // [핵심] 겹침 방지: 5번의 랜덤 시도 중 가장 덜 겹치는 위치 선택
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const testLeft = Math.random() * 120 - 10; // 테스트할 가로 위치
+            let currentOverlap = 0;
+
+            // 현재 화면에 있는 다른 배경 별들과의 거리 체크
+            document.querySelectorAll('.background-star').forEach(other => {
+                const rect1 = { x: testLeft, y: initialY || -size, w: size };
+                const rect2 = { 
+                    x: parseFloat(other.style.left), 
+                    y: parseFloat(other.getAttribute('data-y') || 0), 
+                    w: parseFloat(other.style.width) 
+                };
+
+                // 두 별 사이의 거리 계산
+                const dist = Math.sqrt(Math.pow(rect1.x - rect2.x, 2) + Math.pow(rect1.y - rect2.y, 2));
+                // 별의 크기보다 가까우면 겹침 점수 추가
+                if (dist < (rect1.w + rect2.w) * 0.6) {
+                    currentOverlap += (rect1.w + rect2.w) - dist;
+                }
+            });
+
+            if (currentOverlap < minOverlap) {
+                minOverlap = currentOverlap;
+                bestLeft = testLeft;
+            }
+            if (minOverlap === 0) break; // 안 겹치는 곳 찾으면 바로 중단
+        }
+
+        s.style.left = `${bestLeft}vw`;
+        const startTop = initialY !== null ? initialY : -size;
+        s.style.top = `${startTop}px`;
+        s.setAttribute('data-y', startTop); // 위치 추적용 데이터 저장
+
+        const hues = [0, 50, 210]; 
+        const chosenHue = hues[Math.floor(Math.random() * hues.length)];
+        s.style.backgroundColor = `hsla(${chosenHue}, 90%, 96%, 1)`;
+        
+        const fallDuration = Math.random() * 7 + 8; 
+        s.style.transition = `transform ${fallDuration}s linear, opacity ${fallDuration}s linear`;
+        s.style.zIndex = `-1`; 
+
+        document.body.appendChild(s);
+
+        requestAnimationFrame(() => {
+            s.style.transform = `translateY(120vh) rotate(${Math.random() * 180 - 90}deg)`;
+        });
+
+        setTimeout(() => s.remove(), fallDuration * 1000);
+    }
+
+    // [추가] 페이지 로드 시 "이미 떨어지고 있는 별" 10개 즉시 생성
+    function initBackgroundStars() {
+        for (let i = 0; i < 10; i++) {
+            // 화면 높이(window.innerHeight)의 랜덤한 위치에 미리 배치
+            const randomY = Math.random() * window.innerHeight;
+            createFallingStar(randomY);
+        }
+    }
+
+    // 초기화 함수 실행
+    initBackgroundStars();
+
+    // 이후 일정 간격으로 배경 별 계속 생성
+    setInterval(() => createFallingStar(), 600);
+
+    // 4. 애니메이션 루프
+    function animate() {
+        requestAnimationFrame(animate);
+        globalRotate += rotateSpeed;
+        document.querySelectorAll('.trail').forEach(s => {
+            s.style.transform = s.style.transform.replace(/rotate\(.*deg\)/, `rotate(${globalRotate}deg)`);
+        });
+    }
+    animate();
+</script>
+</body>
+</html>
